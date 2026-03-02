@@ -1,0 +1,71 @@
+############################
+# Environment / Secrets
+############################
+
+.env
+.env.*
+!.env.example
+
+############################
+# Python
+############################
+
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.egg-info/
+*.egg
+dist/
+build/
+.venv/
+venv/
+.envrc
+
+############################
+# Node / Next.js
+############################
+
+node_modules/
+.next/
+out/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+############################
+# VS Code / IDE
+############################
+
+.vscode/
+.idea/
+*.swp
+*.swo
+
+############################
+# OS
+############################
+
+.DS_Store
+Thumbs.db
+
+############################
+# Data (Never Commit Bank Data)
+############################
+
+data/*.csv
+data/sample/*.csv
+*.csv
+
+############################
+# Docker
+############################
+
+docker-compose.override.yml
+
+############################
+# Logs
+############################
+
+*.log
