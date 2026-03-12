@@ -1,9 +1,11 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ReactNode } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { removeToken } from "@/lib/auth";
 
 const NavItem = ({
   href,
@@ -21,6 +23,13 @@ const NavItem = ({
 );
 
 export function AppShell({ children }: { children: ReactNode }) {
+  const router = useRouter();
+
+  const handleLogout = () => {
+    removeToken();
+    router.push('/login');
+  };
+
   return (
     <div className="min-h-screnn bg-muted/40">
       <div className="flec min-h-screen">
@@ -29,8 +38,16 @@ export function AppShell({ children }: { children: ReactNode }) {
             <div className="text-lg font-semibold tracking-tight">FinLit</div>
             <Badge variant="secondary">MVP</Badge>
           </div>
-          <div className="text-sm text-muted-foreground">
-            Education, not advice
+          <div className="flex items-center gap-4">
+            <div className="text-sm text-muted-foreground">
+              Education, not advice
+            </div>
+            <button
+              onClick={handleLogout}
+              className="text-sm text-muted-foreground hover:text-foreground transition"
+            >
+              Logout
+            </button>
           </div>
         </header>
 

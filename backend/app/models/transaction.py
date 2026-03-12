@@ -11,7 +11,7 @@ import enum
 from datetime import datetime, date
 from decimal import Decimal
 from sqlalchemy import (
-    String, Numeric, Date, DateTime, Enum, Text, Integer, Boolean, Index
+    String, Numeric, Date, DateTime, Enum, Text, Integer, Boolean, Index, ForeignKey
 )
 from sqlalchemy.orm import Mapped, mapped_column
 from app.core.database import Base
@@ -81,6 +81,7 @@ class Transaction(Base):
     __tablename__ = "transactions"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), nullable=False, index=True)
 
     # Source
     bank: Mapped[Bank] = mapped_column(Enum(Bank), nullable=False)
@@ -107,7 +108,7 @@ class Transaction(Base):
     __table_args__ = (
         Index("ix_txn_date", "transaction_date"),
         Index("ix_txn_category", "category"),
-        Index("ix_txn_bank_id", "bank", "bank_transaction_id", unique=True),
+        Index("ix_txn_bank_id", "user_id", "bank", "bank_transaction_id", unique=True),
     )
 
     @property
@@ -124,6 +125,7 @@ class MonthlySnapshot(Base):
     __tablename__ = "monthly_snapshots"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id"), nullable=False, index=True)
     year: Mapped[int] = mapped_column(Integer, nullable=False)
     month: Mapped[int] = mapped_column(Integer, nullable=False)
 
@@ -146,5 +148,5 @@ class MonthlySnapshot(Base):
     computed_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     __table_args__ = (
-        Index("ix_snapshot_period", "year", "month", unique=True),
+        Index("ix_snapshot_period", "user_id", "year", "month", unique=True),
     )

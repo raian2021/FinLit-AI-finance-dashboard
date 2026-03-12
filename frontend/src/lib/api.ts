@@ -1,7 +1,6 @@
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+import { getToken, setToken, removeToken } from '@/lib/auth';
 
-// In production, store this securely. For local MVP, it's fine here.
-const API_KEY = process.env.NEXT_PUBLIC_API_KEY || 'change-me';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
 interface FetchOptions extends RequestInit {
   params?: Record<string, string>;
@@ -16,13 +15,26 @@ async function apiFetch<T>(endpoint: string, options: FetchOptions = {}): Promis
     url += `?${searchParams.toString()}`;
   }
 
+  const token = getToken();
+  const headers: Record<string, string> = {
+    ...(fetchOptions.headers as Record<string, string> || {}),
+  };
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
   const response = await fetch(url, {
     ...fetchOptions,
-    headers: {
-      'X-API-Key': API_KEY,
-      ...fetchOptions.headers,
-    },
+    headers,
   });
+
+  if (response.status === 401) {
+    removeToken();
+    if (typeof window !== 'undefined') {
+      window.location.href = '/login';
+    }
+    throw new Error('Unauthorized');
+  }
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ detail: 'Unknown error' }));
@@ -97,6 +109,35 @@ export interface UploadResponse {
 }
 
 export const api = {
+  // Auth
+  login: async (email: string, password: string): Promise<void> => {
+    const res = await fetch(`${API_BASE}/api/v1/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Login failed' }));
+      throw new Error(err.detail || 'Login failed');
+    }
+    const data = await res.json();
+    setToken(data.access_token);
+  },
+
+  register: async (email: string, password: string): Promise<void> => {
+    const res = await fetch(`${API_BASE}/api/v1/auth/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Registration failed' }));
+      throw new Error(err.detail || 'Registration failed');
+    }
+    const data = await res.json();
+    setToken(data.access_token);
+  },
+
   // Health
   health: () => apiFetch<{ status: string }>('/api/v1/health'),
 

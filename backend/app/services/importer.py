@@ -11,6 +11,7 @@ async def import_transactions(
     db: AsyncSession,
     file_content: bytes,
     bank: Bank,
+    user_id: int,
 ) -> UploadResponse:
     """Parse CSV and import transactions, skipping duplicates."""
     parsed, parse_errors = parse_csv(file_content, bank)
@@ -19,10 +20,11 @@ async def import_transactions(
     duplicates = 0
 
     for txn_data in parsed:
-        # Check for duplicate by bank + bank_transaction_id
+        # Check for duplicate by user + bank + bank_transaction_id
         existing = await db.execute(
             select(Transaction.id).where(
                 and_(
+                    Transaction.user_id == user_id,
                     Transaction.bank == txn_data["bank"],
                     Transaction.bank_transaction_id == txn_data["bank_transaction_id"],
                 )
@@ -32,7 +34,7 @@ async def import_transactions(
             duplicates += 1
             continue
 
-        txn = Transaction(**txn_data)
+        txn = Transaction(**txn_data, user_id=user_id)
         db.add(txn)
         imported += 1
 

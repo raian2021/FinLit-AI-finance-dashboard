@@ -26,13 +26,14 @@ from app.schemas.transaction import (
 
 
 async def compute_monthly_snapshot(
-    db: AsyncSession, year: int, month: int
+    db: AsyncSession, year: int, month: int, user_id: int
 ) -> MonthlySnapshot:
     """Compute and cache monthly aggregates from raw transactions."""
 
     # Fetch all non-excluded transactions for the month
     stmt = select(Transaction).where(
         and_(
+            Transaction.user_id == user_id,
             extract("year", Transaction.transaction_date) == year,
             extract("month", Transaction.transaction_date) == month,
             Transaction.is_excluded == False,
@@ -78,7 +79,11 @@ async def compute_monthly_snapshot(
     # Upsert snapshot
     existing = await db.execute(
         select(MonthlySnapshot).where(
-            and_(MonthlySnapshot.year == year, MonthlySnapshot.month == month)
+            and_(
+                MonthlySnapshot.user_id == user_id,
+                MonthlySnapshot.year == year,
+                MonthlySnapshot.month == month,
+            )
         )
     )
     snapshot = existing.scalar_one_or_none()
@@ -96,6 +101,7 @@ async def compute_monthly_snapshot(
         snapshot.computed_at = datetime.utcnow()
     else:
         snapshot = MonthlySnapshot(
+            user_id=user_id,
             year=year,
             month=month,
             total_income=total_income,
@@ -116,10 +122,10 @@ async def compute_monthly_snapshot(
 
 
 async def get_monthly_overview(
-    db: AsyncSession, year: int, month: int
+    db: AsyncSession, year: int, month: int, user_id: int
 ) -> Optional[MonthlyOverview]:
     """Get or compute a monthly overview."""
-    snapshot = await compute_monthly_snapshot(db, year, month)
+    snapshot = await compute_monthly_snapshot(db, year, month, user_id)
     if not snapshot:
         return None
 
@@ -156,10 +162,12 @@ async def get_cashflow_truth(
     db: AsyncSession,
     start_date: date,
     end_date: date,
+    user_id: int,
 ) -> CashFlowTruth:
     """The core truth screen — where does your money actually go?"""
     stmt = select(Transaction).where(
         and_(
+            Transaction.user_id == user_id,
             Transaction.transaction_date >= start_date,
             Transaction.transaction_date <= end_date,
             Transaction.is_excluded == False,
@@ -278,7 +286,7 @@ def run_simulation(req: SimulationRequest) -> SimulationResult:
     )
 
 
-async def build_ai_summary(db: AsyncSession, months: int = 3) -> dict:
+async def build_ai_summary(db: AsyncSession, months: int = 3, user_id: int = 0) -> dict:
     """
     Build an AGGREGATED summary safe to send to AI.
     NO raw transactions, NO merchant names, NO personal identifiers.
@@ -297,7 +305,7 @@ async def build_ai_summary(db: AsyncSession, months: int = 3) -> dict:
         if m > 12:
             m -= 12
             y += 1
-        overview = await get_monthly_overview(db, y, m)
+        overview = await get_monthly_overview(db, y, m, user_id)
         if overview:
             snapshots.append({
                 "period": f"{y}-{m:02d}",

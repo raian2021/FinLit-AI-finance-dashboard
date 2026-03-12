@@ -1,7 +1,9 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { api, QuickStats, CashFlowTruth } from '@/lib/api'
+import { isLoggedIn } from '@/lib/auth'
 
 import { AppShell } from '@/components/AppShell'
 import UploadCard from '@/components/UploadCard'
@@ -13,10 +15,17 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 
 export default function Dashboard() {
+  const router = useRouter()
   const [stats, setStats] = useState<QuickStats | null>(null)
   const [cashflow, setCashflow] = useState<CashFlowTruth | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!isLoggedIn()) {
+      router.replace('/login')
+    }
+  }, [router])
 
   const loadData = async () => {
     setLoading(true)
